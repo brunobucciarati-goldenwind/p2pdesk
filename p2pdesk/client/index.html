@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Remote Desktop Client</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        
+        .connection-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .connection-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .connection-form label {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .connection-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .connection-form button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .connection-form button:hover {
+            background: linear-gradient(135deg, #218838, #1e7e34);
+        }
+        
+        .connection-form button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background: #e8f4f8;
+            padding: 10px 20px;
+            border-left: 4px solid #17a2b8;
+            margin: 0;
+            font-weight: bold;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .main-content {
+            display: flex;
+            height: 600px;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .peer-list {
+            margin-bottom: 20px;
+        }
+        
+        .peer-list h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        
+        .peer-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .message {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #007bff;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .message:nth-child(even) {
+            background: #e9ecef;
+        }
+        
+        .input-area {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .message-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .message-input:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+        
+        .send-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .send-button:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .send-button:active {
+            transform: translateY(0);
+        }
+        
+        .send-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-panel {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .info-panel h4 {
+            margin-top: 0;
+            color: #155724;
+        }
+        
+        .info-panel ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .info-panel li {
+            margin: 5px 0;
+            color: #155724;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .connection-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .connection-form label {
+                min-width: auto;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .messages {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖥️ P2P Remote Desktop Client</h1>
+            <p>独立クライアント版 - サーバーIPを入力して接続</p>
+        </div>
+        
+        <div class="connection-panel">
+            <div class="connection-form">
+                <label for="serverIp">サーバーIP:</label>
+                <input type="text" id="serverIp" placeholder="例: 192.168.1.100:8080" value="localhost:8080">
+                <button id="connectBtn">接続</button>
+                <button id="disconnectBtn" class="hidden" style="background: linear-gradient(135deg, #dc3545, #c82333);">切断</button>
+            </div>
+        </div>
+        
+        <div id="status" class="status">未接続 - サーバーIPを入力して接続ボタンを押してください</div>
+        
+        <div class="main-content hidden" id="mainContent">
+            <div class="sidebar">
+                <div id="peerList" class="peer-list">
+                    <h3>接続中のピア:</h3>
+                    <p>読み込み中...</p>
+                </div>
+                <div class="info-panel">
+                    <h4>📋 機能説明</h4>
+                    <ul>
+                        <li>Socket.IOによるシグナリング</li>
+                        <li>WebRTCによるP2P通信</li>
+                        <li>リアルタイムテキストメッセージ</li>
+                        <li>複数クライアント対応</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="chat-area">
+                <div id="messages" class="messages">
+                    <div class="message">[System] P2P Remote Desktop Clientへようこそ！</div>
+                    <div class="message">[System] サーバーに接続してチャットを開始してください。</div>
+                </div>
+                <div class="input-area">
+                    <input id="messageInput" class="message-input" placeholder="メッセージを入力してEnterキーを押すか送信ボタンをクリック..." autocomplete="off" disabled>
+                    <button id="sendButton" class="send-button" disabled>📤 送信</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO Client -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        class P2PDesktopClient {
+            constructor() {
+                this.socket = null;
+                this.peerConnections = new Map();
+                this.dataChannels = new Map();
+                this.localPeerId = '';
+                this.isConnected = false;
+                
+                // ICE servers configuration
+                this.iceServers = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                };
+
+                this.initializeUI();
+            }
+
+            initializeUI() {
+                const connectBtn = document.getElementById('connectBtn');
+                const disconnectBtn = document.getElementById('disconnectBtn');
+                const serverIpInput = document.getElementById('serverIp');
+                const sendButton = document.getElementById('sendButton');
+                const messageInput = document.getElementById('messageInput');
+                
+                connectBtn.addEventListener('click', () => {
+                    this.connectToServer();
+                });
+                
+                disconnectBtn.addEventListener('click', () => {
+                    this.disconnect();
+                });
+                
+                sendButton.addEventListener('click', () => {
+                    this.sendMessage();
+                });
+                
+                messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+
+                // Enter key on server IP input
+                serverIpInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.connectToServer();
+                    }
+                });
+            }
+
+            connectToServer() {
+                const serverIpInput = document.getElementById('serverIp');
+                const serverIp = serverIpInput.value.trim();
+                
+                if (!serverIp) {
+                    this.updateStatus('サーバーIPを入力してください', 'error');
+                    return;
+                }
+
+                this.updateStatus('サーバーに接続中...', 'connecting');
+                
+                try {
+                    const serverUrl = serverIp.startsWith('http') ? serverIp : `http://${serverIp}`;
+                    this.socket = io(serverUrl);
+                    this.initializeSocketEvents();
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    this.updateStatus('接続に失敗しました: ' + error.message, 'error');
+                }
+            }
+
+            initializeSocketEvents() {
+                this.socket.on('connect', () => {
+                    this.localPeerId = this.socket.id;
+                    console.log(`Connected to server with ID: ${this.localPeerId}`);
+                    this.updateStatus(`接続完了 - ID: ${this.localPeerId}`, 'connected');
+                    this.isConnected = true;
+                    
+                    // UI更新
+                    document.getElementById('connectBtn').classList.add('hidden');
+                    document.getElementById('disconnectBtn').classList.remove('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+                    document.getElementById('messageInput').disabled = false;
+                    document.getElementById('sendButton').disabled = false;
+                    document.getElementById('serverIp').disabled = true;
+                });
+
+                this.socket.on('connect_error', (error) => {
+                    console.error('Connection error:', error);
+                    this.updateStatus('接続エラー: ' + error.message, 'error');
+                });
+
+                this.socket.on('disconnect', () => {
+                    console.log('Disconnected from server');
+                    this.updateStatus('サーバーから切断されました', 'error');
+                    this.isConnected = false;
+                    this.resetUI();
+                });
+
+                this.socket.on('peer-list', (peerList) => {
+                    console.log('Available peers:', peerList);
+                    this.updatePeerList(peerList);
+                    
+                    // 既存のピアに接続を開始
+                    peerList.forEach(peerId => {
+                        this.initiatePeerConnection(peerId);
+                    });
+                });
+
+                this.socket.on('peer-connected', (data) => {
+                    console.log('Peer connected:', data);
+                    this.addLogMessage(`System: ${data.message}`);
+                    this.initiatePeerConnection(data.peerId);
+                });
+
+                this.socket.on('peer-disconnected', (data) => {
+                    console.log('Peer disconnected:', data);
+                    this.addLogMessage(`System: ${data.message}`);
+                    this.closePeerConnection(data.peerId);
+                });
+
+                this.socket.on('offer', (data) => {
+                    console.log('Received offer from:', data.sender);
+                    this.handleOffer(data.offer, data.sender);
+                });
+
+                this.socket.on('answer', (data) => {
+                    console.log('Received answer from:', data.sender);
+                    this.handleAnswer(data.answer, data.sender);
+                });
+
+                this.socket.on('ice-candidate', (data) => {
+                    console.log('Received ICE candidate from:', data.sender);
+                    this.handleIceCandidate(data.candidate, data.sender);
+                });
+
+                this.socket.on('text-message', (data) => {
+                    this.addLogMessage(`${data.sender}: ${data.message}`);
+                });
+            }
+
+            disconnect() {
+                if (this.socket) {
+                    this.socket.disconnect();
+                }
+                this.resetUI();
+            }
+
+            resetUI() {
+                document.getElementById('connectBtn').classList.remove('hidden');
+                document.getElementById('disconnectBtn').classList.add('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+                document.getElementById('messageInput').disabled = true;
+                document.getElementById('sendButton').disabled = true;
+                document.getElementById('serverIp').disabled = false;
+                this.updateStatus('未接続 - サーバーIPを入力して接続ボタンを押してください', '');
+            }
+
+            async initiatePeerConnection(peerId) {
+                if (this.peerConnections.has(peerId)) {
+                    return; // Already connected
+                }
+
+                const peerConnection = new RTCPeerConnection(this.iceServers);
+                this.peerConnections.set(peerId, peerConnection);
+
+                // ICE candidate handling
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        this.socket.emit('ice-candidate', {
+                            candidate: event.candidate,
+                            target: peerId
+                        });
+                    }
+                };
+
+                // Data channel handling
+                const dataChannel = peerConnection.createDataChannel('messages', {
+                    ordered: true
+                });
+                
+                dataChannel.onopen = () => {
+                    console.log(`Data channel opened with ${peerId}`);
+                    this.addLogMessage(`System: ${peerId}と直接接続が確立されました`);
+                };
+                
+                dataChannel.onmessage = (event) => {
+                    this.addLogMessage(`${peerId} (P2P): ${event.data}`);
+                };
+                
+                this.dataChannels.set(peerId, dataChannel);
+
+                peerConnection.ondatachannel = (event) => {
+                    const channel = event.channel;
+                    channel.onmessage = (event) => {
+                        this.addLogMessage(`${peerId} (P2P): ${event.data}`);
+                    };
+                };
+
+                try {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    
+                    this.socket.emit('offer', {
+                        offer: offer,
+                        target: peerId
+                    });
+                } catch (error) {
+                    console.error('Error creating offer:', error);
+                }
+            }
+
+            async handleOffer(offer, senderId) {
+                if (this.peerConnections.has(senderId)) {
+                    return; // Already connected
+                }
+
+                const peerConnection = new RTCPeerConnection(this.iceServers);
+                this.peerConnections.set(senderId, peerConnection);
+
+                // ICE candidate handling
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        this.socket.emit('ice-candidate', {
+                            candidate: event.candidate,
+                            target: senderId
+                        });
+                    }
+                };
+
+                // Data channel handling
+                peerConnection.ondatachannel = (event) => {
+                    const channel = event.channel;
+                    this.dataChannels.set(senderId, channel);
+                    
+                    channel.onopen = () => {
+                        console.log(`Data channel opened with ${senderId}`);
+                        this.addLogMessage(`System: ${senderId}と直接接続が確立されました`);
+                    };
+                    
+                    channel.onmessage = (event) => {
+                        this.addLogMessage(`${senderId} (P2P): ${event.data}`);
+                    };
+                };
+
+                try {
+                    await peerConnection.setRemoteDescription(offer);
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    this.socket.emit('answer', {
+                        answer: answer,
+                        target: senderId
+                    });
+                } catch (error) {
+                    console.error('Error handling offer:', error);
+                }
+            }
+
+            async handleAnswer(answer, senderId) {
+                const peerConnection = this.peerConnections.get(senderId);
+                if (peerConnection) {
+                    try {
+                        await peerConnection.setRemoteDescription(answer);
+                    } catch (error) {
+                        console.error('Error handling answer:', error);
+                    }
+                }
+            }
+
+            async handleIceCandidate(candidate, senderId) {
+                const peerConnection = this.peerConnections.get(senderId);
+                if (peerConnection) {
+                    try {
+                        await peerConnection.addIceCandidate(candidate);
+                    } catch (error) {
+                        console.error('Error adding ICE candidate:', error);
+                    }
+                }
+            }
+
+            closePeerConnection(peerId) {
+                const peerConnection = this.peerConnections.get(peerId);
+                const dataChannel = this.dataChannels.get(peerId);
+                
+                if (dataChannel) {
+                    dataChannel.close();
+                    this.dataChannels.delete(peerId);
+                }
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    this.peerConnections.delete(peerId);
+                }
+            }
+
+            sendMessage() {
+                const messageInput = document.getElementById('messageInput');
+                const message = messageInput.value.trim();
+                
+                if (message && this.isConnected) {
+                    // Socket.IOを使用してメッセージを送信
+                    this.socket.emit('text-message', { message });
+                    
+                    // P2P接続があればそちらでも送信
+                    this.dataChannels.forEach((channel, peerId) => {
+                        if (channel.readyState === 'open') {
+                            channel.send(message);
+                        }
+                    });
+                    
+                    messageInput.value = '';
+                }
+            }
+
+            addLogMessage(message) {
+                const messagesDiv = document.getElementById('messages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message';
+                messageElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                messagesDiv.appendChild(messageElement);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+
+            updateStatus(status, type = '') {
+                const statusDiv = document.getElementById('status');
+                statusDiv.textContent = status;
+                statusDiv.className = 'status' + (type ? ' ' + type : '');
+            }
+
+            updatePeerList(peers) {
+                const peerListDiv = document.getElementById('peerList');
+                peerListDiv.innerHTML = '<h3>接続中のピア:</h3>';
+                
+                if (peers.length === 0) {
+                    peerListDiv.innerHTML += '<p>他のピアは接続していません</p>';
+                } else {
+                    peers.forEach(peerId => {
+                        const peerElement = document.createElement('div');
+                        peerElement.textContent = peerId;
+                        peerElement.className = 'peer-item';
+                        peerListDiv.appendChild(peerElement);
+                    });
+                }
+            }
+        }
+
+        // アプリケーション開始
+        document.addEventListener('DOMContentLoaded', () => {
+            new P2PDesktopClient();
+        });
+    </script>
+</body>
+</html>

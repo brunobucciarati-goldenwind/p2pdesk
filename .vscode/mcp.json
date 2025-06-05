@@ -1,0 +1,10 @@
+{
+    "servers": {
+        "ddg-search": {
+            "command": "python3",
+            "args": [
+                "/app/mcp/server.py",
+            ],
+        }
+    }
+}
